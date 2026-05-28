@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tính Toán Đếm Ngón Tay</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f9fc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+
+        /* Khung nhập liệu tối giản - Không tiêu đề */
+        .input-container {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .calc-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 25px;
+        }
+
+        input[type="number"] {
+            width: 90px;
+            height: 60px;
+            font-size: 32px;
+            text-align: center;
+            border: 3px solid #cbd5e1;
+            border-radius: 12px;
+            outline: none;
+            color: #1e293b;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .btn-tinh {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-tinh:hover {
+            background-color: #059669;
+            transform: translateY(-2px);
+        }
+
+        /* MÀN HÌNH TRẮNG PHỦ TOÀN BỘ KHI ẤN TÍNH */
+        .overlay-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 9999;
+            display: none;
+            overflow: hidden; /* Không cho cuộn, mọi thứ nằm gọn trong màn hình */
+        }
+
+        /* Khu vực chứa các bàn tay hiển thị ngẫu nhiên */
+        .hands-display-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Khung chứa ảnh bàn tay định vị tuyệt đối */
+        .hand-wrapper {
+            position: absolute;
+            /* Kích thước bàn tay to rõ ràng ban đầu */
+            width: var(--hand-w, 160px);
+            height: var(--hand-h, 220px);
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .hand-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        /* CHỮ SỐ ĐẾM MÀU ĐEN NỔI BẬT */
+        .finger-number {
+            position: absolute;
+            color: #000000;
+            font-weight: 900;
+            font-size: var(--font-sz, 28px);
+            z-index: 100;
+            transform: translate(-50%, -50%);
+            /* Tạo viền trắng dày xung quanh chữ đen để nổi bần bật trên nền ảnh */
+            text-shadow: 
+                -2.5px -2.5px 0 #fff,  
+                 2.5px -2.5px 0 #fff,
+                -2.5px  2.5px 0 #fff,
+                 2.5px  2.5px 0 #fff,
+                 0px  4px 8px rgba(0,0,0,0.3);
+        }
+
+        /* KHUNG HIỆN KẾT QUẢ ĐỊNH VỊ CỐ ĐỊNH Ở TRUNG TÂM PHÍA DƯỚI */
+        .result-box {
+            display: none;
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10001;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 20px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border: 2px solid #e2e8f0;
+            width: 85%;
+            max-width: 340px;
+        }
+
+        .result-box h1 {
+            color: #1e293b;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .result-box .total-score {
+            font-size: 64px;
+            font-weight: 900;
+            color: #ef4444;
+            margin: 5px 0;
+        }
+
+        .btn-close {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+            width: 100%;
+        }
+
+        .btn-close:hover {
+            background-color: #2563eb;
+        }
+
+        #fwCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="input-container">
+        <div class="calc-row">
+            <input type="number" id="num1" min="0" placeholder="0">
+            <span>+</span>
+            <input type="number" id="num2" min="0" placeholder="0">
+            <span>=</span>
+        </div>
+        <button class="btn-tinh" onclick="batDauTinhToan()">Bắt đầu tính</button>
+    </div>
+
+    <div class="overlay-screen" id="overlayScreen">
+        
+        <div class="hands-display-container" id="handsContainer"></div>
+
+        <div class="result-box" id="resultBox">
+            <h1>Kết quả là :</h1>
+            <div class="total-score" id="finalResult">0</div>
+            <button class="btn-close" onclick="dongManHinhTrang()">Đóng</button>
+        </div>
+
+        <canvas id="fwCanvas"></canvas>
+    </div>
+
+    <script>
+        const fingerCoords = [
+            { top: '49%', left: '16%' }, // Ngón cái
+            { top: '23%', left: '34%' }, // Ngón trỏ
+            { top: '19%', left: '53%' }, // Ngón giữa
+            { top: '24%', left: '71%' }, // Ngón áp út
+            { top: '38%', left: '87%' }  // Ngón út
+        ];
+
+        const linkAnh = "https://i.ibb.co/PRfzDmN/IMG-7354.jpg";
+        let timerId = null;
+        let animationFrameId = null;
+
+        const canvas = document.getElementById('fwCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function createFireworks() {
+            particles = [];
+            const colors = ['#ff0055', '#00ffcc', '#ffcc00', '#ff6600', '#00ff00', '#cc00ff', '#3399ff'];
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 3,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.7) * 12 - 2,
+                    size: Math.random() * 4 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1,
+                    gravity: 0.16
+                });
+            }
+        }
+
+        function drawFireworks() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let active = false;
+
+            particles.forEach(p => {
+                if (p.alpha > 0) {
+                    active = true;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += p.gravity;
+                    p.alpha -= 0.015;
+
+                    ctx.save();
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+
+            if (active) {
+                animationFrameId = requestAnimationFrame(drawFireworks);
+            }
+        }
+
+        // Tìm vị trí ngẫu nhiên không đè lên vùng kết quả hoặc tràn viền màn hình
+        function getRamdomPosition(handWidth, handHeight, existingPositions) {
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
+
+            // Vùng an toàn của tọa độ
+            const minX = 10;
+            const maxX = screenW - handWidth - 10;
+            const minY = 20; 
+            const maxY = screenH - handHeight - 140; 
+
+            let bestX = minX + Math.random() * (maxX - minX);
+            let bestY = minY + Math.random() * (maxY - minY);
+
+            for (let k = 0; k < 20; k++) {
+                let testX = minX + Math.random() * (maxX - minX);
+                let testY = minY + Math.random() * (maxY - minY);
+                
+                let minDistance = 99999;
+                for (let pos of existingPositions) {
+                    let dist = Math.hypot(testX - pos.x, testY - pos.y);
+                    if (dist < minDistance) minDistance = dist;
+                }
+                
+                if (existingPositions.length === 0 || minDistance > 80) {
+                    bestX = testX;
+                    bestY = testY;
+                    break;
+                }
+            }
+
+            return { x: bestX, y: bestY };
+        }
+
+        function batDauTinhToan() {
+            const v1 = parseInt(document.getElementById('num1').value) || 0;
+            const v2 = parseInt(document.getElementById('num2').value) || 0;
+
+            if (v1 < 0 || v2 < 0) {
+                alert("Vui lòng nhập số hợp lệ!");
+                return;
+            }
+
+            const tongSo = v1 + v2;
+
+            const overlay = document.getElementById('overlayScreen');
+            overlay.style.display = 'block';
+            resizeCanvas();
+
+            document.getElementById('resultBox').style.display = 'none';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const handsContainer = document.getElementById('handsContainer');
+            handsContainer.innerHTML = ""; 
+
+            if (tongSo === 0) {
+                hienThiKetQuaCuoi(0);
+                return;
+            }
+
+            const tongSoBanTaySeCo = Math.ceil(tongSo / 5);
+            
+            // Kích cỡ linh hoạt theo tổng số bàn tay
+            let handW = 160;
+            let handH = 220;
+            let fontSz = "28px";
+
+            if (tongSoBanTaySeCo > 8) {
+                handW = 95;
+                handH = 130;
+                fontSz = "18px";
+            } else if (tongSoBanTaySeCo > 3) {
+                handW = 120;
+                handH = 165;
+                fontSz = "22px";
+            }
+
+            let hienTaiDem = 0;
+            let existingPositions = [];
+
+            function chayHieuUngDem() {
+                if (hienTaiDem < tongSo) {
+                    hienTaiDem++;
+
+                    const thuTuBanTay = Math.floor((hienTaiDem - 1) / 5);
+                    const thuTuNgon = (hienTaiDem - 1) % 5;
+
+                    let banTayHienTai = document.getElementById(`hand-id-${thuTuBanTay}`);
+                    
+                    if (!banTayHienTai) {
+                        banTayHienTai = document.createElement('div');
+                        banTayHienTai.className = "hand-wrapper";
+                        banTayHienTai.id = `hand-id-${thuTuBanTay}`;
+                        
+                        banTayHienTai.style.setProperty('--hand-w', `${handW}px`);
+                        banTayHienTai.style.setProperty('--hand-h', `${handH}px`);
+                        banTayHienTai.style.setProperty('--font-sz', fontSz);
+
+                        const pos = getRamdomPosition(handW, handH, existingPositions);
+                        existingPositions.push(pos);
+                        
+                        banTayHienTai.style.left = `${pos.x}px`;
+                        banTayHienTai.style.top = `${pos.y}px`;
+
+                        const img = document.createElement('img');
+                        img.src = linkAnh;
+                        img.className = "hand-img";
+
+                        banTayHienTai.appendChild(img);
+                        handsContainer.appendChild(banTayHienTai);
+                    }
+
+                    const toaDoNgon = fingerCoords[thuTuNgon];
+                    const numSpot = document.createElement('div');
+                    numSpot.className = "finger-number";
+                    numSpot.style.top = toaDoNgon.top;
+                    numSpot.style.left = toaDoNgon.left;
+                    numSpot.innerText = hienTaiDem;
+
+                    banTayHienTai.appendChild(numSpot);
+
+                    let thoiGianCho = 500; 
+                    if (thuTuBanTay === 1) {
+                        thoiGianCho = 350; 
+                    } else if (thuTuBanTay === 2) {
+                        thoiGianCho = 200; 
+                    } else if (thuTuBanTay >= 3) {
+                        thoiGianCho = 90; 
+                    }
+
+                    timerId = setTimeout(chayHieuUngDem, thoiGianCho);
+                } else {
+                    hienThiKetQuaCuoi(tongSo);
+                }
+            }
+
+            timerId = setTimeout(chayHieuUngDem, 300);
+        }
+
+        function hienThiKetQuaCuoi(ketQua) {
+            document.getElementById('finalResult').innerText = ketQua;
+            document.getElementById('resultBox').style.display = 'block';
+            createFireworks();
+            drawFireworks();
+        }
+
+        function dongManHinhTrang() {
+            clearTimeout(timerId);
+            cancelAnimationFrame(animationFrameId);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('overlayScreen').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
